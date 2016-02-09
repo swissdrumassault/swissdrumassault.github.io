@@ -1,56 +1,36 @@
+C++ link errors with AVR systems
+================================
 
-Non-constant curvature log-likelihoods
-======================================
+While writing C++ programs for my `Arduino Nano
+<http://www.ebay.co.uk/itm/3-0-Controller-Board-CH340-USB-DriverNano-Compatible-with-Arduino-Nano-/191744378906">`_, I noticed that, every now and again, I would `flash
+<href="http://www.nongnu.org/avrdude/">`_ a binary that didn't work - the chip would just sit there doing nothing.
 
+I eventually tracked it down to a problem with the startup code. The default (as of 4.8.3) GCC startup code uses a jump instruction that, if the static initialisation code is too big, hasn't got enough bits to jump to the correct start address, it overflows and ends up jumping into the middle of the static initialisation. There are two solutions to this:
 
-I have been trying to think if I can come up with a likelihood with non-constant log-curvature, but which still produces integrable posteriors (i.e. the evidence can be calculated) when used with normal entropic priors.
+- Don't write so much static initialisation code (but where's the fun in that?) 
 
-Sadly, I don't think I can.
+- Edit the link script to rearrange the sections, so that static initialisation goes *after* the normal code.
 
-I had hoped that :math:`\frac{1}{x^2 + 1}` might be useful, as it has reasonably non trivial gradients. 
+::
 
-.. math::
+    --- /usr/avr/lib/ldscripts/avr5.x       2014-06-14 17:50:26.887597912 +0100
+    +++ /home/swiss/atmel/avr_fixed.x 2014-08-09 12:40:44.365324557 +0100
+    @@ -123,10 +123,10 @@
+         KEEP (*(.init8))
+         *(.init9)  /* Call main().  */
+         KEEP (*(.init9))
+    -    *(.text)
+    -    . = ALIGN(2);
+          *(.text.*)
+         . = ALIGN(2);
+    +    *(.text)
+    +    . = ALIGN(2);
+         *(.fini9)  /* _exit() starts here.  */
+         KEEP (*(.fini9))
+         *(.fini8)
 
-    L = -\log\left(\frac{1}{x^2 + 1} \right) 
-    
-    \frac{\partial L}{\partial x} = \frac{2x}{x^2 + 1}  
-    
-    \frac{\partial^2 L}{\partial x^2} = 2\frac{1-x^2}{\left(x^2 + 1\right)^2}  
-    
-    
-but, the posterior form (for quadratic entropy) is not integrable
-
-.. math::
-
-    E \propto \int \frac{\exp\left( -\frac{1}{2}\left(\frac{x-\mu}{\sigma}\right)^2\right)}{x^2 + 1} \textrm{d}x
-
-Then it occurred to me that I don't need a properly integrable function. I'm trying to work this out to validate an inference system. This system only returns Gaussian approximations to the evidence, so I can validate it by comparing the real Gaussian approximation with what it has calculated. I only need to make sure that I can work out the curvature of the log-posterior at its peak. 
-
-Also the form of the prior used is actually slightly different, it is centered at zero. Also, to make things interesting, I'm going to make :math:`x` the residual between some data and some linear model fit
-
-.. math::
-
-    x_i = \frac{d_i - \sum_j R_{ij} h_j}{\sigma}
-
-    E \propto \int \frac{\exp\left( -\frac{1}{2}\sum_j \frac{h^2_j}{m_i}\right)}{\prod_i x_i^2 + 1} \textrm{d}x
-
-Considering the (unnormalised) log-posterior,
-
-.. math::
-
-    Q = -\frac{1}{2}\sum_j \frac{h^2_j}{m_i} - \sum_i \log\left( \left(\frac{d_i - \sum_j R_{ij} h_j}{\sigma}\right)^2 + 1 \right)
-
-and its gradient
-
-.. math::
-    
-    \frac { \partial Q}{\partial h_k} = - \frac{h_k}{m_i} - \sum_i \left( \left(\frac{d_i - \sum_j R_{ij} h_j}{\sigma}\right)^2 + 1 \right)^{-1} 
-    2 \left(\frac{d_i - \sum_j R_{ij} h_j}{\sigma}\right) \frac{-R_{ik}}{\sigma}
-
-
-shows that finding the peak is going to be hard.
 
 .. post:: Feb 02, 2016
-   :tags:
+   :tags: avr
    :category:
 

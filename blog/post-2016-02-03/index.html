@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>C++ link errors with AVR systems &mdash; Blog  documentation</title>
+    <title>Non-constant curvature log-likelihoods &mdash; Blog  documentation</title>
     
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -54,31 +54,28 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="c-link-errors-with-avr-systems">
-<h1>C++ link errors with AVR systems<a class="headerlink" href="#c-link-errors-with-avr-systems" title="Permalink to this headline">¶</a></h1>
-<p>While writing C++ programs for my <a class="reference external" href="http://www.ebay.co.uk/itm/3-0-Controller-Board-CH340-USB-DriverNano-Compatible-with-Arduino-Nano-/191744378906&quot;">Arduino Nano</a>, I noticed that, every now and again, I would <a class="reference external" href="href=&quot;http://www.nongnu.org/avrdude/&quot;">flash</a> a binary that didn&#8217;t work - the chip would just sit there doing nothing.</p>
-<p>I eventually tracked it down to a problem with the startup code. The default (as of 4.8.3) GCC startup code uses a jump instruction that, if the static initialisation code is too big, hasn&#8217;t got enough bits to jump to the correct start address, it overflows and ends up jumping into the middle of the static initialisation. There are two solutions to this:</p>
-<ul class="simple">
-<li>Don&#8217;t write so much static initialisation code (but where&#8217;s the fun in that?)</li>
-<li>Edit the link script to rearrange the sections, so that static initialisation goes <em>after</em> the normal code.</li>
-</ul>
-<div class="highlight-python"><div class="highlight"><pre>--- /usr/avr/lib/ldscripts/avr5.x       2014-06-14 17:50:26.887597912 +0100
-+++ /home/swiss/atmel/avr_fixed.x 2014-08-09 12:40:44.365324557 +0100
-@@ -123,10 +123,10 @@
-     KEEP (*(.init8))
-     *(.init9)  /* Call main().  */
-     KEEP (*(.init9))
--    *(.text)
--    . = ALIGN(2);
-      *(.text.*)
-     . = ALIGN(2);
-+    *(.text)
-+    . = ALIGN(2);
-     *(.fini9)  /* _exit() starts here.  */
-     KEEP (*(.fini9))
-     *(.fini8)
-</pre></div>
-</div>
+  <div class="section" id="non-constant-curvature-log-likelihoods">
+<h1>Non-constant curvature log-likelihoods<a class="headerlink" href="#non-constant-curvature-log-likelihoods" title="Permalink to this headline">¶</a></h1>
+<p>I have been trying to think if I can come up with a likelihood with non-constant log-curvature, but which still produces integrable posteriors (i.e. the evidence can be calculated) when used with normal entropic priors.</p>
+<p>Sadly, I don&#8217;t think I can.</p>
+<p>I had hoped that <span class="math">\(\frac{1}{x^2 + 1}\)</span> might be useful, as it has reasonably non trivial gradients.</p>
+<div class="math">
+\[L = -\log\left(\frac{1}{x^2 + 1} \right)\]\[\frac{\partial L}{\partial x} = \frac{2x}{x^2 + 1}\]\[\frac{\partial^2 L}{\partial x^2} = 2\frac{1-x^2}{\left(x^2 + 1\right)^2}\]</div>
+<p>but, the posterior form (for quadratic entropy) is not integrable</p>
+<div class="math">
+\[E \propto \int \frac{\exp\left( -\frac{1}{2}\left(\frac{x-\mu}{\sigma}\right)^2\right)}{x^2 + 1} \textrm{d}x\]</div>
+<p>Then it occurred to me that I don&#8217;t need a properly integrable function. I&#8217;m trying to work this out to validate an inference system. This system only returns Gaussian approximations to the evidence, so I can validate it by comparing the real Gaussian approximation with what it has calculated. I only need to make sure that I can work out the curvature of the log-posterior at its peak.</p>
+<p>Also the form of the prior used is actually slightly different, it is centered at zero. Also, to make things interesting, I&#8217;m going to make <span class="math">\(x\)</span> the residual between some data and some linear model fit</p>
+<div class="math">
+\[x_i = \frac{d_i - \sum_j R_{ij} h_j}{\sigma}\]\[E \propto \int \frac{\exp\left( -\frac{1}{2}\sum_j \frac{h^2_j}{m_i}\right)}{\prod_i x_i^2 + 1} \textrm{d}x\]</div>
+<p>Considering the (unnormalised) log-posterior,</p>
+<div class="math">
+\[Q = -\frac{1}{2}\sum_j \frac{h^2_j}{m_i} - \sum_i \log\left( \left(\frac{d_i - \sum_j R_{ij} h_j}{\sigma}\right)^2 + 1 \right)\]</div>
+<p>and its gradient</p>
+<div class="math">
+\[\frac { \partial Q}{\partial h_k} = - \frac{h_k}{m_i} - \sum_i \left( \left(\frac{d_i - \sum_j R_{ij} h_j}{\sigma}\right)^2 + 1 \right)^{-1}
+2 \left(\frac{d_i - \sum_j R_{ij} h_j}{\sigma}\right) \frac{-R_{ik}}{\sigma}\]</div>
+<p>shows that finding the peak is going to be hard.</p>
 </div>
 
   <div class="section">
@@ -89,13 +86,19 @@
 <div class="section">
   <span style="float: left;">
   
+  
+  <a href="../post-2016-02-03a/">
+    <i class="fa fa-arrow-circle-left"></i>
+    Guitar project final piece
+  </a>
+  
   </span>
   <span>&nbsp;</span>
   <span style="float: right;">
   
   
-  <a href="../post-2016-02-03a/">
-    Guitar project final piece
+  <a href="../post-2016-02-05/">
+    Linux Ainol Novo 7
     <i class="fa fa-arrow-circle-right"></i>
   </a>
   </span>
@@ -126,7 +129,7 @@
   <h2>
   
   <i class="fa fa-calendar"></i>
-    Feb 02, 2016
+    Feb 03, 2016
   
   </h2>
 
@@ -145,7 +148,7 @@
   <li><i class="fa-fw fa fa-tag"></i>
     
       
-      <a href="../blog/tag/avr/">avr</a>
+      <a href="../blog/tag/maths/">maths</a>
       
     </li>
   
@@ -165,9 +168,9 @@
     
       <li><a href="../post-2016-02-05/">Feb 05 - Linux Ainol Novo 7</a></li>
     
-      <li><a href="../post-2016-02-03/">Feb 03 - Non-constant curvature log-likelihoods</a></li>
-    
       <li><a href="../post-2016-02-03a/">Feb 03 - Guitar project final piece</a></li>
+    
+      <li><a href="../post-2016-02-02/">Feb 02 - C++ link errors with AVR systems</a></li>
     
   </ul>
 
@@ -240,7 +243,7 @@
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
       
       |
-      <a href="../_sources/post-2016-02-02.txt"
+      <a href="../_sources/post-2016-02-03.txt"
           rel="nofollow">Page source</a>
     </div>
 

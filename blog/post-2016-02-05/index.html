@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>C++ link errors with AVR systems &mdash; Blog  documentation</title>
+    <title>Linux Ainol Novo 7 &mdash; Blog  documentation</title>
     
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -54,29 +54,77 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="c-link-errors-with-avr-systems">
-<h1>C++ link errors with AVR systems<a class="headerlink" href="#c-link-errors-with-avr-systems" title="Permalink to this headline">¶</a></h1>
-<p>While writing C++ programs for my <a class="reference external" href="http://www.ebay.co.uk/itm/3-0-Controller-Board-CH340-USB-DriverNano-Compatible-with-Arduino-Nano-/191744378906&quot;">Arduino Nano</a>, I noticed that, every now and again, I would <a class="reference external" href="href=&quot;http://www.nongnu.org/avrdude/&quot;">flash</a> a binary that didn&#8217;t work - the chip would just sit there doing nothing.</p>
-<p>I eventually tracked it down to a problem with the startup code. The default (as of 4.8.3) GCC startup code uses a jump instruction that, if the static initialisation code is too big, hasn&#8217;t got enough bits to jump to the correct start address, it overflows and ends up jumping into the middle of the static initialisation. There are two solutions to this:</p>
-<ul class="simple">
-<li>Don&#8217;t write so much static initialisation code (but where&#8217;s the fun in that?)</li>
-<li>Edit the link script to rearrange the sections, so that static initialisation goes <em>after</em> the normal code.</li>
-</ul>
-<div class="highlight-python"><div class="highlight"><pre>--- /usr/avr/lib/ldscripts/avr5.x       2014-06-14 17:50:26.887597912 +0100
-+++ /home/swiss/atmel/avr_fixed.x 2014-08-09 12:40:44.365324557 +0100
-@@ -123,10 +123,10 @@
-     KEEP (*(.init8))
-     *(.init9)  /* Call main().  */
-     KEEP (*(.init9))
--    *(.text)
--    . = ALIGN(2);
-      *(.text.*)
-     . = ALIGN(2);
-+    *(.text)
-+    . = ALIGN(2);
-     *(.fini9)  /* _exit() starts here.  */
-     KEEP (*(.fini9))
-     *(.fini8)
+  <div class="section" id="linux-ainol-novo-7">
+<h1>Linux Ainol Novo 7<a class="headerlink" href="#linux-ainol-novo-7" title="Permalink to this headline">¶</a></h1>
+<p>A few years ago I bough a few incredibly cheap MIPS tablets, made by a Chinese company called, rather unfortunatly, Ainol. The varients I got seem to be called Novo 7 and contain Ingenic Xburst jz7440 systems, based on npm702.</p>
+<p>/proc/cpuinfo says:</p>
+<div class="highlight-python"><div class="highlight"><pre>system type             : JZ4770
+processor               : MIPS-compatible processor JZ4770
+cpu model               : Ingenic Xburst
+BogoMIPS                : 1001.47
+wait instruction        : yes
+microsecond timers      : no
+tlb_entries             : 32
+extra interrupt vector  : yes
+hardware watchpoint     : yes, count: 1, address/irw mask: [0x0fff]
+ASEs implemented        : mxu
+shadow register sets    : 1
+core                    : 0
+VCED exceptions         : not available
+VCEI exceptions         : not available
+Features                : fpu mxu dsp lowpower
+CPU implementer         : Ingenic
+CPU architecture        : MIPS
+
+Hardware                : npm702
+Revision                : 0005
+Serial                  : 0000000000000000
+
+EFUSE0                  : 90880f07
+EFUSE1                  : 0eb05011
+EFUSE2                  : 08550000
+EFUSE3                  : 8854c84f
+EFUSE4                  : 00000000
+EFUSE5                  : 00000000
+EFUSE6                  : 00000000
+EFUSE7                  : 00000000
+</pre></div>
+</div>
+<p>I have found two useful blogs about these machines, one <a class="reference external" href="http://suz-aa1.sblo.jp/article/54697897.html&quot;">Japanese</a>, one <a class="reference external" href="http://a320.emulate.su/2012/05/14/mini-obzor-planshet-ainol-novo7-paladin-i-processor-jz4770/&quot;">Russian</a>.</p>
+<p>I have managed to produce a kernel that can be booted on these boards, but I can&#8217;t remember exactly where I got the source from. The Japanese AspireOne blog includes some links to patches to kernel 3.0.23 which match the version that I have source for. There&#8217;s also an android custom rom by someone called &#8220;pinkflodz&#8221;.</p>
+<p>This can be cross compiled (with one caveat) and installed via clockworkmod (which was already installed as the android recovery system on the tablets I got). The caveat is that there is some confusion in my tool chain (gcc 4.8.3) as to what opcodes can be used. This can be fixed by adding a pre-processing step to cc1.</p>
+<p>Move <cite>/usr/libexec/gcc/mipsel-linux-uclibc/4.8.3/cc1</cite> to <cite>/usr/libexec/gcc/mipsel-linux-uclibc/4.8.3/cc1.orig</cite> and replace <cite>cc1</cite> with this script</p>
+<div class="highlight-python"><div class="highlight"><pre>#!/bin/sh
+
+DIR=/usr/libexec/gcc/mipsel-linux-uclibc/4.8.3
+
+$DIR/cc1.orig $* &gt; /tmp/$$-xxx
+egrep -i &#39;(S32I2M|S32M2I)&#39; /tmp/$$-xxx &gt; /dev/null
+if [ $? == 0 ]; then
+  $DIR/mxu_as &lt; /tmp/$$-xxx
+else
+  cat /tmp/$$-xxx
+fi
+rm -f /tmp/$$-xxx
+&lt;/code&gt;&lt;/pre&gt;
+</pre></div>
+</div>
+<p>(I got this from the <a class="reference external" href="http://suz-aa1.sblo.jp/article/38304175.html">AspireOne blog</a>. Thank you.)</p>
+<p>There&#8217;s also a slight issue with the wifi. I couldn&#8217;t get the dhd.ko from the kernel source to work properly, so had to use the one I got from pinkflodz&#8217;s rom (I think). This requires a bit of firmware (again taken from the rom) and for the filenames to be passed to the module when inserted, e.g.</p>
+<div class="highlight-python"><div class="highlight"><pre>insmod /lib/modules/3.0.21/dhd.ko firmware_path=/gentoo/lib/firmware/fw_iw8101.bin nvram_path=/gentoo/lib/firmware/nvram_iw8101.txt
+</pre></div>
+</div>
+<p>Luckily 3.0.21 and 3.0.23 are similar enough that this works.</p>
+<p>I was also able to get the abd from the rom to work with linux. So that, if the wifi doesn&#8217;t work, you can plug it in and use the normal android abd to get a shell over USB.</p>
+<div class="highlight-python"><div class="highlight"><pre>einfo &quot;Starting adb&quot;
+chown 2000 /dev/android_adb
+chmod a+rwx /dev/android_adb
+echo 0 &gt;/sys/class/android_usb/android0/enable
+echo 18D1 &gt;/sys/class/android_usb/android0/idVendor
+echo D001 &gt;/sys/class/android_usb/android0/idProduct
+echo adb &gt;/sys/class/android_usb/android0/functions
+echo 1 &gt;/sys/class/android_usb/android0/enable
+/opt/ainol/bin/adbd &amp;
 </pre></div>
 </div>
 </div>
@@ -89,16 +137,15 @@
 <div class="section">
   <span style="float: left;">
   
+  
+  <a href="../post-2016-02-03/">
+    <i class="fa fa-arrow-circle-left"></i>
+    Non-constant curvature log-likelihoods
+  </a>
+  
   </span>
   <span>&nbsp;</span>
   <span style="float: right;">
-  
-  
-  <a href="../post-2016-02-03a/">
-    Guitar project final piece
-    <i class="fa fa-arrow-circle-right"></i>
-  </a>
-  </span>
   
 </div>
 
@@ -126,7 +173,7 @@
   <h2>
   
   <i class="fa fa-calendar"></i>
-    Feb 02, 2016
+    Feb 05, 2016
   
   </h2>
 
@@ -145,7 +192,7 @@
   <li><i class="fa-fw fa fa-tag"></i>
     
       
-      <a href="../blog/tag/avr/">avr</a>
+      <a href="../blog/tag/ainol-linux/">ainol linux</a>
       
     </li>
   
@@ -163,11 +210,11 @@
   <ul>
     
     
-      <li><a href="../post-2016-02-05/">Feb 05 - Linux Ainol Novo 7</a></li>
-    
       <li><a href="../post-2016-02-03/">Feb 03 - Non-constant curvature log-likelihoods</a></li>
     
       <li><a href="../post-2016-02-03a/">Feb 03 - Guitar project final piece</a></li>
+    
+      <li><a href="../post-2016-02-02/">Feb 02 - C++ link errors with AVR systems</a></li>
     
   </ul>
 
@@ -240,7 +287,7 @@
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
       
       |
-      <a href="../_sources/post-2016-02-02.txt"
+      <a href="../_sources/post-2016-02-05.txt"
           rel="nofollow">Page source</a>
     </div>
 

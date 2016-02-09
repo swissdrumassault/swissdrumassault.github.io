@@ -2,12 +2,48 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title type="text">Some descriptions of some of my projects</title>
   <id>http://swissdrumassault.github.io/blog/atom.xml</id>
-  <updated>2016-02-02T00:00:00Z</updated>
+  <updated>2016-02-05T00:00:00Z</updated>
   <link href="http://swissdrumassault.github.io/" />
   <link href="http://swissdrumassault.github.io/blog/atom.xml" rel="self" />
   <generator uri="http://ablog.readthedocs.org" version="0.8.2">ABlog</generator>
   <entry xml:base="http://swissdrumassault.github.io/blog/atom.xml">
+    <title type="text">Linux Ainol Novo 7</title>
+    <id>http://swissdrumassault.github.io/post-2016-02-05/</id>
+    <updated>2016-02-05T00:00:00Z</updated>
+    <published>2016-02-05T00:00:00Z</published>
+    <link href="http://swissdrumassault.github.io/post-2016-02-05/" />
+    <author>
+      <name></name>
+    </author>
+    <content type="html">&lt;p&gt;A few years ago I bough a few incredibly cheap MIPS tablets, made by a Chinese company called, rather unfortunatly, Ainol. The varients I got seem to be called Novo 7 and contain Ingenic Xburst jz7440 systems, based on npm702.&lt;/p&gt;
+</content>
+  </entry>
+  <entry xml:base="http://swissdrumassault.github.io/blog/atom.xml">
     <title type="text">Non-constant curvature log-likelihoods</title>
+    <id>http://swissdrumassault.github.io/post-2016-02-03/</id>
+    <updated>2016-02-03T00:00:00Z</updated>
+    <published>2016-02-03T00:00:00Z</published>
+    <link href="http://swissdrumassault.github.io/post-2016-02-03/" />
+    <author>
+      <name></name>
+    </author>
+    <content type="html">&lt;p&gt;I have been trying to think if I can come up with a likelihood with non-constant log-curvature, but which still produces integrable posteriors (i.e. the evidence can be calculated) when used with normal entropic priors.&lt;/p&gt;
+</content>
+  </entry>
+  <entry xml:base="http://swissdrumassault.github.io/blog/atom.xml">
+    <title type="text">Guitar project final piece</title>
+    <id>http://swissdrumassault.github.io/post-2016-02-03a/</id>
+    <updated>2016-02-03T00:00:00Z</updated>
+    <published>2016-02-03T00:00:00Z</published>
+    <link href="http://swissdrumassault.github.io/post-2016-02-03a/" />
+    <author>
+      <name></name>
+    </author>
+    <content type="html">&lt;p&gt;I got the final piece for my guitar effects project - a step up converter so that I can power a 5v USB hub from a 3.7v LiPo battery. I got &lt;a class=&quot;reference external&quot; href=&quot;href=&amp;quot;http://www.ebay.co.uk/itm/131672628691&amp;quot;&quot;&gt;this&lt;/a&gt; that arrived quickly and works.&lt;/p&gt;
+</content>
+  </entry>
+  <entry xml:base="http://swissdrumassault.github.io/blog/atom.xml">
+    <title type="text">C++ link errors with AVR systems</title>
     <id>http://swissdrumassault.github.io/post-2016-02-02/</id>
     <updated>2016-02-02T00:00:00Z</updated>
     <published>2016-02-02T00:00:00Z</published>
@@ -15,7 +51,7 @@
     <author>
       <name></name>
     </author>
-    <content type="html">&lt;p&gt;I have been trying to think if I can come up with a likelihood with non-constant log-curvature, but which still produces integrable posteriors (i.e. the evidence can be calculated) when used with normal entropic priors.&lt;/p&gt;
+    <content type="html">&lt;p&gt;While writing C++ programs for my &lt;a class=&quot;reference external&quot; href=&quot;http://www.ebay.co.uk/itm/3-0-Controller-Board-CH340-USB-DriverNano-Compatible-with-Arduino-Nano-/191744378906&amp;quot;&quot;&gt;Arduino Nano&lt;/a&gt;, I noticed that, every now and again, I would &lt;a class=&quot;reference external&quot; href=&quot;href=&amp;quot;http://www.nongnu.org/avrdude/&amp;quot;&quot;&gt;flash&lt;/a&gt; a binary that didn&amp;#8217;t work - the chip would just sit there doing nothing.&lt;/p&gt;
 </content>
   </entry>
 </feed>

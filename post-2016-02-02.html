@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+<body>
+
+<H2>2016-02-02 : C++ link errors with AVR systems</H2>
+
+<p>While writing C++ programs for my <a href="http://www.ebay.co.uk/itm/3-0-Controller-Board-CH340-USB-DriverNano-Compatible-with-Arduino-Nano-/191744378906">Arduino Nano</a>, I noticed that, every now and again, I would <a href="http://www.nongnu.org/avrdude/">flash</a> a binary that didn't work - the chip would just sit there doing nothing.</p>
+
+<p>I eventually tracked it down to a problem with the startup code. The default (as of 4.8.3) GCC startup code uses a jump instruction that, if the static initialisation code is too big, hasn't got enough bits to jump to the correct start address, it overflows and ends up jumping into the middle of the static initialisation. There are two solutions to this:</p>
+
+<ul>
+<li>Don't write so much static initialisation code (but where's the fun in that?) </li>
+<li>Edit the link script to rearrange the sections, so that static initialisation goes *after* the normal code.</li>
+</ul>
+
+<pre><code class="diff">
+--- /usr/avr/lib/ldscripts/avr5.x       2014-06-14 17:50:26.887597912 +0100
++++ /home/swiss/atmel/avr_fixed.x 2014-08-09 12:40:44.365324557 +0100
+@@ -123,10 +123,10 @@
+     KEEP (*(.init8))
+     *(.init9)  /* Call main().  */
+     KEEP (*(.init9))
+-    *(.text)
+-    . = ALIGN(2);
+      *(.text.*)
+     . = ALIGN(2);
++    *(.text)
++    . = ALIGN(2);
+     *(.fini9)  /* _exit() starts here.  */
+     KEEP (*(.fini9))
+     *(.fini8)
+</code></pre>
+
+</body>
+</html>

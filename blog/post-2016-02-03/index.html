@@ -73,7 +73,7 @@
 \[Q = -\frac{1}{2}\sum_j \frac{h^2_j}{m_i} - \sum_i \log\left( \left(\frac{d_i - \sum_j R_{ij} h_j}{\sigma}\right)^2 + 1 \right)\]</div>
 <p>and its gradient</p>
 <div class="math">
-\[\frac { \partial Q}{\partial h_k} = - 2\frac{h_k}{m_i} - \sum_i \left( \left(\frac{d_i - \sum_j R_{ij} h_j}{\sigma}\right)^2 + 1 \right)^{-1}
+\[\frac { \partial Q}{\partial h_k} = - \frac{h_k}{m_i} - \sum_i \left( \left(\frac{d_i - \sum_j R_{ij} h_j}{\sigma}\right)^2 + 1 \right)^{-1}
 2 \left(\frac{d_i - \sum_j R_{ij} h_j}{\sigma}\right) \frac{-R_{ik}}{\sigma}\]</div>
 <p>shows that finding the peak is going to be hard.</p>
 </div>

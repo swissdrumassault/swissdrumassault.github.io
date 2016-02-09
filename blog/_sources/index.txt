@@ -17,5 +17,3 @@ Here is a list of most recent posts:
 .. toctree::
    :hidden:
 
-   about.rst
-

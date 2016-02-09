@@ -44,7 +44,7 @@ and its gradient
 
 .. math::
     
-    \frac { \partial Q}{\partial h_k} = - \frac{h_k}{m_i} - \sum_i \left( \left(\frac{d_i - \sum_j R_{ij} h_j}{\sigma}\right)^2 + 1 \right)^{-1} 
+    \frac { \partial Q}{\partial h_k} = - 2\frac{h_k}{m_i} - \sum_i \left( \left(\frac{d_i - \sum_j R_{ij} h_j}{\sigma}\right)^2 + 1 \right)^{-1} 
     2 \left(\frac{d_i - \sum_j R_{ij} h_j}{\sigma}\right) \frac{-R_{ik}}{\sigma}
 
 

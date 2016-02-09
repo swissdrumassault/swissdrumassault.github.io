@@ -249,6 +249,7 @@ html_theme = 'alabaster'
 # documentation.
 html_theme_options = {
     'github_button': False,
+    'page_width' : '90%'
 }
 
 # Add any paths that contain custom themes here, relative to this directory.

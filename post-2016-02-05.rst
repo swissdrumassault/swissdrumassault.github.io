@@ -93,5 +93,5 @@ I was also able to get the abd from the rom to work with linux. So that, if the 
 
 
 .. post:: Feb 05, 2016
-   :tags: ainol linux
+   :tags: ainol, linux
    :category:

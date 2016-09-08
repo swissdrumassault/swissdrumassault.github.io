@@ -40,8 +40,8 @@ A few years ago I bough a few incredibly cheap MIPS tablets, made by a Chinese c
 
 
 I have found two useful blogs about these machines, one `Japanese
-<http://suz-aa1.sblo.jp/article/54697897.html">`_, one `Russian
-<http://a320.emulate.su/2012/05/14/mini-obzor-planshet-ainol-novo7-paladin-i-processor-jz4770/">`_.
+<http://suz-aa1.sblo.jp/article/54697897.html>`_, one `Russian
+<http://a320.emulate.su/2012/05/14/mini-obzor-planshet-ainol-novo7-paladin-i-processor-jz4770/>`_.
 
 I have managed to produce a kernel that can be booted on these boards, but I can't remember exactly where I got the source from. The Japanese AspireOne blog includes some links to patches to kernel 3.0.23 which match the version that I have source for. There's also an android custom rom by someone called "pinkflodz".
 
@@ -63,7 +63,6 @@ Move `/usr/libexec/gcc/mipsel-linux-uclibc/4.8.3/cc1` to `/usr/libexec/gcc/mipse
       cat /tmp/$$-xxx
     fi
     rm -f /tmp/$$-xxx
-    </code></pre>
 
 (I got this from the `AspireOne blog
 <http://suz-aa1.sblo.jp/article/38304175.html>`_. Thank you.)

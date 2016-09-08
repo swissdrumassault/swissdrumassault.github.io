@@ -1,0 +1,22 @@
+Title
+=====
+
+Text with link `Arduino Nano
+<http://www.ebay.co.uk/itm/3-0-Controller-Board-CH340-USB-DriverNano-Compatible-with-Arduino-Nano-/191744378906">`_, I noticed that, every now and again, I would `flash
+<href="http://www.nongnu.org/avrdude/">`_ a binary that didn't work - the chip would just sit there doing nothing.
+
+A list
+
+- Don't write so much static initialisation code (but where's the fun in that?) 
+
+- Edit the link script to rearrange the sections, so that static initialisation goes *after* the normal code.
+
+::
+
+    Some quoted code
+    
+
+.. post:: Feb 02, 2016
+   :tags: template
+   :category:
+

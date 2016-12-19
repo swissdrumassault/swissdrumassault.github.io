@@ -22,3 +22,5 @@ I then needed to parse my rst files into a single doctools doctree object and ru
 After a certain amount of toiling in the sphinx source (and minimal documentation), I realised that it would be quicker (and more fun) to write my own sort-of-rst parser. This would have the added benefit that I could do links in a much more sensible manner (i.e. like markdown).
 
 This I have now done (apart from tables) and this (current) blog is the result.
+
+The code is available from [here](https://github.com/swissdrumassault/swissdrumassault.github.io.git).

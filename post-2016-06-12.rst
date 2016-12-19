@@ -1,0 +1,16 @@
+.. post:: 2016-06-12
+   :tags: google
+   :category:
+   :title: Gmail is awful
+
+Gmail is awful
+==============
+
+Over the past few years, gmail has been steadily getting worse.
+
+Until today my biggest complaint was that the andorid app shows all the emails out of order ("conversation view"). While this can be turned off on the desktop, it can't on my phone. Google have replied to all the many pleas with (pretty much) FU.
+
+Now, I discover that, in order to sort my emails by sender, I either need an extension or to inject some java script. [http://www.gtricks.com/gmail/sort-gmail-subject-label-sender/#sender](http://www.gtricks.com/gmail/sort-gmail-subject-label-sender/#sender)
+
+This makes me sad and cross.
+

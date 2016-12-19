@@ -1,0 +1,95 @@
+.. post:: 2016-02-05
+   :tags: ainol, linux
+   :category:
+   :title: Linux Ainol Novo 7
+
+Linux Ainol Novo 7
+==================
+
+A few years ago I bough a few incredibly cheap MIPS tablets, made by a Chinese company called, rather unfortunatly, Ainol. The varients I got seem to be called Novo 7 and contain Ingenic Xburst jz7440 systems, based on npm702. 
+
+`/proc/cpuinfo` says: 
+
+::
+
+    system type             : JZ4770
+    processor               : MIPS-compatible processor JZ4770
+    cpu model               : Ingenic Xburst
+    BogoMIPS                : 1001.47
+    wait instruction        : yes
+    microsecond timers      : no
+    tlb_entries             : 32
+    extra interrupt vector  : yes
+    hardware watchpoint     : yes, count: 1, address/irw mask: [0x0fff]
+    ASEs implemented        : mxu
+    shadow register sets    : 1
+    core                    : 0
+    VCED exceptions         : not available
+    VCEI exceptions         : not available
+    Features                : fpu mxu dsp lowpower
+    CPU implementer         : Ingenic
+    CPU architecture        : MIPS
+
+    Hardware                : npm702
+    Revision                : 0005
+    Serial                  : 0000000000000000
+
+    EFUSE0                  : 90880f07
+    EFUSE1                  : 0eb05011
+    EFUSE2                  : 08550000
+    EFUSE3                  : 8854c84f
+    EFUSE4                  : 00000000
+    EFUSE5                  : 00000000
+    EFUSE6                  : 00000000
+    EFUSE7                  : 00000000 
+
+
+I have found two useful blogs about these machines, one [Japanese](http://suz-aa1.sblo.jp/article/54697897.html), one [Russian](http://a320.emulate.su/2012/05/14/mini-obzor-planshet-ainol-novo7-paladin-i-processor-jz4770/).
+
+I have managed to produce a kernel that can be booted on these boards, but I can't remember exactly where I got the source from. The Japanese AspireOne blog includes some links to patches to kernel 3.0.23 which match the version that I have source for. There's also an android custom rom by someone called "pinkflodz".
+
+This can be cross compiled (with one caveat) and installed via clockworkmod (which was already installed as the android recovery system on the tablets I got). The caveat is that there is some confusion in my tool chain (gcc 4.8.3) as to what opcodes can be used. This can be fixed by adding a pre-processing step to cc1.  
+
+Move `/usr/libexec/gcc/mipsel-linux-uclibc/4.8.3/cc1` to `/usr/libexec/gcc/mipsel-linux-uclibc/4.8.3/cc1.orig` and replace `cc1` with this script 
+
+::
+
+    #!/bin/sh
+
+    DIR=/usr/libexec/gcc/mipsel-linux-uclibc/4.8.3
+
+    $DIR/cc1.orig $* > /tmp/$$-xxx
+    egrep -i '(S32I2M|S32M2I)' /tmp/$$-xxx > /dev/null
+    if [ $? == 0 ]; then
+      $DIR/mxu_as < /tmp/$$-xxx
+    else
+      cat /tmp/$$-xxx
+    fi
+    rm -f /tmp/$$-xxx
+
+(I got this from the [AspireOne blog](http://suz-aa1.sblo.jp/article/38304175.html). Thank you.)
+
+There's also a slight issue with the wifi. I couldn't get the dhd.ko from the kernel source to work properly, so had to use the one I got from pinkflodz's rom (I think). This requires a bit of firmware (again taken from the rom) and for the filenames to be passed to the module when inserted, e.g.
+
+::
+
+    insmod /lib/modules/3.0.21/dhd.ko firmware_path=/gentoo/lib/firmware/fw_iw8101.bin nvram_path=/gentoo/lib/firmware/nvram_iw8101.txt 
+
+
+Luckily 3.0.21 and 3.0.23 are similar enough that this works.
+
+I was also able to get the abd from the rom to work with linux. So that, if the wifi doesn't work, you can plug it in and use the normal android abd to get a shell over USB. 
+
+::
+
+    einfo "Starting adb"
+    chown 2000 /dev/android_adb
+    chmod a+rwx /dev/android_adb
+    echo 0 >/sys/class/android_usb/android0/enable
+    echo 18D1 >/sys/class/android_usb/android0/idVendor
+    echo D001 >/sys/class/android_usb/android0/idProduct
+    echo adb >/sys/class/android_usb/android0/functions
+    echo 1 >/sys/class/android_usb/android0/enable
+    /opt/ainol/bin/adbd &
+
+

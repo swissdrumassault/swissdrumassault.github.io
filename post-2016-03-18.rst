@@ -1,0 +1,596 @@
+.. post:: 2016-03-18
+   :tags: bwc, linux
+   :category:
+   :title: Linux on a BWC 7" tablet
+
+Linux on a BWC 7" tablet
+========================
+
+I have a rubbish tablet manufactured by BWC which seems to be a ForFun v1.3 WonderMedia 8880 based system. There's some google evidence that it was also once called KiDiGi.
+
+It's not really fast enough to run Android so I wanted to put Linux on it. This presented a challenge.
+
+(TL;DR Use the kernel source/compiler from [https://github.com/psachin/apc-rock-II-kernel]( https://github.com/psachin/apc-rock-II-kernel) and put it on a VFAT partition on the sdcard)
+
+Attempt 1. Put the kernel on the internal storage
+-------------------------------------------------
+
+There is a custom ROM that one can install that gives an Android that is pretty well rooted. It requires a bit of jiggery pokery changing names of config files to have leading `+` symbols. For this tablet the config file I needed was `+.fwc`.
+
+The developer options are clearly visible on the setting screen and `adb shell` followed by `su` gives you a root session. This allowed dumping of the internal storage (and demsg) and revealed the following structure
+
+::
+
+    cat /proc/wmt_mtd
+    
+    dev:  offset    name
+    mtd0: 00000000 "u-boot-SF"
+    mtd1: 00050000 "u-boot env. cfg. 1-SF"
+    mtd2: 00060000 "u-boot env. cfg. 2-SF"
+    mtd3: 00070000 "w-load-SF"
+    mtd4: 00000000 "logo"
+    mtd5: 01000000 "boot"
+    mtd6: 02000000 "recovery"
+    mtd7: 03000000 "misc"
+    mtd8: 04000000 "keydata"
+    mtd9: 08000000 "system"
+    mtd10: 38000000 "cache"
+    mtd11: 58000000 "data"
+
+The top of dmesg:
+
+::
+
+    [    0.000000] Booting Linux on physical CPU 0
+    [    0.000000] Initializing cgroup subsys cpuset
+    [    0.000000] Initializing cgroup subsys cpu
+    [    0.000000] Linux version 3.4.5+ (reilienchen@szmce16) (gcc version 4.5.2 (Sourcery G++ Lite 2011.03-41) ) #2 SMP PREEMPT Mon Sep 23 18:05:35 HKT 2013
+    [    0.000000] CPU: ARMv7 Processor [413fc090] revision 0 (ARMv7), cr=10c5387d
+    [    0.000000] CPU: PIPT / VIPT nonaliasing data cache, VIPT aliasing instruction cache
+    [    0.000000] Machine: WMT
+
+
+Looking at what each partition contains:
+
++-----------------------+---------------------------------------------------------+
+| /dev/block/mtdblock0  | Linux kernel ARM boot executable zImage (little-endian) |
++-----------------------+---------------------------------------------------------+
+| /dev/block/mtdblock1  | u-boot variables                                        |
++-----------------------+---------------------------------------------------------+
+| /dev/block/mtdblock2  | u-boot variables                                        |
++-----------------------+---------------------------------------------------------+
+| /dev/block/mtdblock3  | w-data (?)                                              |
++-----------------------+---------------------------------------------------------+
+| /dev/block/mtdblock4  | Splash screen .bmp                                      |
++-----------------------+---------------------------------------------------------+
+| /dev/block/mtdblock5  | Android bootimg, Normal boot                            |
++-----------------------+---------------------------------------------------------+
+| /dev/block/mtdblock6  | Android bootimg, Recovery boot                          |
++-----------------------+---------------------------------------------------------+
+| /dev/block/mtdblock7  | u-boot variables                                        |
++-----------------------+---------------------------------------------------------+
+| /dev/block/mtdblock8  | empty yaffs                                             |
++-----------------------+---------------------------------------------------------+
+| /dev/block/mtdblock9  | useful yaffs partition full of binaries                 |
++-----------------------+---------------------------------------------------------+
+| /dev/block/mtdblock10 | empty yaffs                                             |
++-----------------------+---------------------------------------------------------+
+| /dev/block/mtdblock11 | yaffs full of android files                             |
++-----------------------+---------------------------------------------------------+
+
+I extracted the android boot image from mtdblock5 and unwrapped it with the excellent tools found at [https://github.com/pbatard/bootimg-tools.git](https://github.com/pbatard/bootimg-tools.git).
+
+Then I compiled a kernel and repacked a new android image with 
+
+::
+
+    mkbootimg --base 0 --pagesize 2048 --kernel_offset 0x10008000 --ramdisk_offset 0x11000000 --second_offset 0x10f00000 --tags_offset 0x10000100 --kernel uzImage.bin --ramdisk ramdisk.cpio.gz -o new.img
+
+I won't go into too much detail about the kernel or how I compiled it because (spoiler alert) it didn't work (see below).
+
+By booting with power + Vol Down you can sometimes get it to boot into the recovery system. Hence, I wrote my android image to `mtdblock6`.  It paused for a while on the splash screen, then booted normally.
+
+At this point I thought "I wonder if there is a UART somewhere inside" so I opened the case. Sadly, in doing so, I managed to crack the screen so that now half of it doesn't work. This presented extra challenges in that most of the boot messages appear on the section on the screen that is broken.
+
+What made it worse is the while the for fun v1.2 board seems to have an exposed UART see [http://www.androidtablets.net/threads/wondermedia-wm8880-for-fun-v712-v1-2.59271](http://www.androidtablets.net/threads/wondermedia-wm8880-for-fun-v712-v1-2.59271), the v1.3 doesn't, so I broke the screen and still didn't have any clue why the kernel wouldn't boot.
+
+Attempt 2. Find a better kernel
+-------------------------------
+
+I found a clockwork mod installer that seemed to match this tablet, extracted the Android bootimg and wrote it to `mtdblock6`. No joy, it just booted normally.
+
+I presume the kernel didn't match enough. I also tried a TWRP image with the same result.
+
+Attempt 3. fastboot
+-------------------
+
+By booting with power+Vol Up you can occasionally get it to boot into fastboot. This doesn't show up as a "normal" fastboot device but one that appears as
+
+::
+    
+    kernel: usb 1-3: New USB device found, idVendor=040d, idProduct=885e
+    kernel: usb 1-3: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+    kernel: usb 1-3: Product: WM8950 USB Device
+    kernel: usb 1-3: Manufacturer: WonderMedia Technologies Inc.
+    kernel: usb 1-3: SerialNumber: 000000000001
+
+Hence
+
+::
+    
+    fastboot -i 0x040d -p 0x885e getvar version-all
+
+FIXME: Put in version-all result
+
+Sadly, `getvar all` doesn't work.
+
+Trying to boot a uzImage with 
+
+::
+    
+    fastboot -i 0x040d -p 0x885e boot uzImage.bin
+
+FIXME: Put in fastboot boot result
+
+Results in a hang. At this point, having failed to boot a variety of kernels in two different ways I was beginning to wonder if the boot loader was locked and would only load signed kernels. I tried to unlock it
+
+::
+    
+    fastboot -i 0x040d -p 0x885e oem unlock
+
+FIXME: Put in oem-unlock result
+
+Which was a further suggestion that I would need to sign my kernel is some way.
+
+Attempt 4. Boot from sdcard
+---------------------------
+
+I then considered how the custom ROM flashing worked.
+
+The u-boot in mtdblock0 will, at boot, look for an sdcard with a vfat partition on mmcblk0p1 and a u-boot script file in `FirmwareInstall/autorun.1.wmt`.
+
+Cutting to the chase, this is the `autorun.1` script I use that works
+
+:: 
+
+    setenv kernel_addr 1000000
+    textout 0 0 \"00010203040506070809101112131415161718192021Booting Linux\" FF0000
+    setenv wmt.display.pwm 10:22000:75
+    setenv wmt.lcd.power 0:1
+    textout 560 20 \"Booting Linux\" FFFF00
+
+    setenv wmt.ram.fake_size 360M
+    setenv wmt.backlight.param 0:1:11:1
+    setenv wmt.gpo.lcd 0:1:0:d8110040:d8110080:d81100c0
+    setenv wmt.display.logoaddr 500000
+    setenv boot-method boot-nand-ota-normal
+    addfwcenv FirmwareInstall/config
+
+    setenv wmt.display.param 2:0:24:1024:600:60
+    setenv wmt.charger.param 1:153:0
+    setenv wmt.io.dm10sensor 1:3:5:1:1:0:-1:2:-1:0:0:0
+    setenv wmt.backlight.param 0:1:11:1:80
+    setenv wmt.io.bat 3:2:1000:f25:dc4:efb:ea4:e74:e35:e02:dd5:db1:d87:d67:d34:cc0
+    setenv wmt.io.bateff.brightness efe-f2d:e97-ec9:e50-e86:e04-e3c:dcc-e05:d99-dd4:d68-da5:d4d-d8b:d27-d67:ce9-d2c
+    setenv wmt.io.bateff.wifi ef4-f01:e94-ea1:e4c-e57:e00-e0d:dca-dd7:d97-da5:d7e-d8c:d66-d73:d49-d57:d22-d31
+    setenv wmt.io.bateff.adapter ef9-f92:e93-f3b:e4f-efb:e03-eb3:dcc-e79:d99-e4f:d67-e25:d4c-e03:d25-de5:cd6-d9f
+    setenv wmt.bt.tty 1
+    setprop ro.wmt.bt bt_hwctl
+
+    saveenv
+
+    setenv memtotal 360M
+    setenv mbsize 73M
+    display show
+    setenv rd_addr 2000000
+    fatload mmc 0 ${kernel_addr} new-uzImage.bin
+    fatload mmc 0 ${rd_addr} FirmwareInstall/installer/initrd-cpio.gz
+    setenv bootargs mbsize=${mbsize} mem=${memtotal} root=/dev/mmcblk0p2 rw  console=tty0 init=/sbin/init rootwait noinitrd fbcon=rotate:2
+    bootm ${kernel_addr}
+
+The ramdisk file doesn't have anything in it and can probably be removed. I have copied some of the environment variables from `FirmwareInstall/config/+ForFun_V7_HD_ZET6251_MAZ7Z233.fwc` so the addfwcenv line can probably go as well. The numbers in the first textout are so I can try and work out how much of the screen is broken.
+
+I make the text into a u-boot script with
+
+::
+
+    mkimage -A ARM -O Linux -T Script -C none -a 0 -e 0 -n "Script Created by Win32" -d autorun.1.txt autorun.1.wmt
+
+where `mkimage` comes from `dev-embedded/u-boot-tools`, and I'd copied all the other information from the original `autorun.1.wmt`.
+
+It turns out that the key to getting it to boot was to use the right compiler. I found [https://github.com/psachin/apc-rock-II-kernel](https://github.com/psachin/apc-rock-II-kernel) which not only contained a functioning kernel that compiled cleanly with the default `.config` but a link to a toolchain that made a kernel that booted on my board. The fbcon parameter is to rotate the screen so that the kernel output is visible on the working half of the screen.
+
+By doing (as the instructions describe)
+
+::
+    
+    make ARCH=arm CROSS_COMPILE=arm_1103_le- ubin -j9
+    
+I got a uzImage.bin that was suitable for putting on the sdcard's boot partition. This makes me wonder if I might have had better luck with the other kernels I'd tried if I had used this compiler.
+ 
+Mali Magic
+----------
+
+Excitingly, the apc-rock-II-kernel included a `mali.ko` that seemed to work. This raised the possibility of accelerated graphics in x11. I found [https://github.com/ssvb/gentoo-overlay-mali-x11.git] (https://github.com/ssvb/gentoo-overlay-mali-x11.git) excellent repository, containing a gentoo overlay for a mali x11 driver called fbturbo.
+
+Sadly, it's structure doesn't quite match what layman wants, so I hacked an overlay into `/etc/layman/overlays/gentoo-overlay-mali-x11.xml`
+
+::
+
+    <?xml version="1.0" ?>
+
+    <repositories version="1.0">
+            <repo priority="50" quality="experimental" status="unofficial">
+                    <name>gentoo-overlay-mali-x11</name>
+                    <description>Mali x11 drivers.</description>
+                    <homepage>https://github.com/ssvb/gentoo-overlay-mali-x11</homepage>
+                    <owner>
+                            <email>larry@gentoo.org</email>
+                    </owner>
+                    <source type="git">https://github.com/ssvb/gentoo-overlay-mali-x11.git</source>
+            </repo>
+    </repositories>
+
+
+and then did
+
+::
+
+    layman -L
+    layman -a gentoo-overlay-mali-x11
+   
+To silence some other emerge warnings I also did
+
+::
+    
+    echo >>/var/lib/layman/gentoo-overlay-mali-x11/metadata/layout.conf "masters = gentoo"
+    echo >>/var/lib/layman/gentoo-overlay-mali-x11/profiles/repo_name gentoo-overlay-mali-x11
+    
+ 
+This got me a certain distance, but there was a broken dependency on `eselect-opengl`. 
+
+::
+
+    emerge: there are no ebuilds to satisfy ">=app-admin/eselect-opengl-1.2.6".
+    (dependency required by "x11-drivers/mali-drivers-9999::gentoo-overlay-mali-x11" [ebuild])
+    (dependency required by "x11-drivers/xf86-video-fbturbo-0.4.0::gentoo-overlay-mali-x11[gles1,gles2]" [ebuild])
+    (dependency required by "xf86-video-fbturbo" [argument])
+
+I removed this dependency from `/var/lib/layman/gentoo-overlay-mali-x11/x11-drivers/mali-drivers/mali-drivers-9999.ebuild` 
+
+::
+
+    --- mali-drivers-9999.orig      2016-03-18 09:44:40.035708452 +0000
+    +++ mali-drivers-9999.ebuild    2016-03-18 09:44:47.889042620 +0000
+    @@ -13,7 +13,7 @@
+     KEYWORDS="~arm"
+     IUSE=""
+
+    -DEPEND=">=app-admin/eselect-opengl-1.2.6"
+    +DEPEND=""
+     RDEPEND="${DEPEND} media-libs/mesa[gles1,gles2]"
+
+     RESTRICT="test"
+
+then fixed the digest with
+
+::
+    
+    ebuild /var/lib/layman/gentoo-overlay-mali-x11/x11-drivers/mali-drivers/mali-drivers-9999.ebuild
+    
+This got as far as actually trying to build `x11-drivers/mali-drivers-9999` which produced this message
+
+::
+
+     * Please obtain the libMali.so library (with DRI2/X11 support enabled)
+     * from your silicon vendor and put it into /opt/mali-x11/lib/libMali.so
+     * before emerging this package.
+
+
+I found a file called `libMali.so` in mtdblock9 and put it in /opt. 
+
+At this point alarm bells began to ring. The stage3 I'd used was one I happened to have lying around (`stage3-armv7a-20150730`) and was a soft-float build. The `libMali.so` I'd found was hardfloat. I realised that this wasn't going to work.
+
+So I went (almost) back to square one and reinstalled from a hard-float stage3 (`stage3-armv7a_hardfp-20160219`). This threw up its own idiosyncracies.
+
+A multiplicity of wlans
+-----------------------
+
+When I booted into the new stage3 (after copying as many config files as appeared sensible from the previous soft-float install), some problems appeared:
+
+1) When inserting the module `s_wmt_ts_zet6221` during boot, `openrc` hung. Hammering control-C progressed the boot.
+
+2) The previously configured `wlan0` didn't come up.
+
+The first failure was occuring because the firmware `ZET6251_MAZ7Z233_fw.bin` couldn't be loaded when the module was inserted.
+
+After some investigation it appeared that the hard float stage3 had a newer udev (version 225 rather than 216) which relied on the kernel to load firmware, rather than using a user space helper. The apc-rock-II-kernel wasn't able to load the firmware itself, so the touch screen driver failed.
+
+By copying `/etc/firmware` from mtdblock9 to `/lib/firmware` on the gentoo root and downgrading udev to udev-216 I got a touchscreen driver that loaded properly and generated events in `/dev/input/event3`
+
+Turning to the wlan, the hard float stage3 presents two wlan interfaces at boot. The first one seems to named either `wlan0` or `wlan1` (this changes from boot to boot) while the second is always called `wlp0s4f0u3`. For added excitement the MAC addresses of the two interfaces seem to randomly swap around on different boots. 
+
+Adding swap
+-----------
+
+Some of the things gentoo wants to compile (i.e. llvm) require a nice lot of memory that the board doesn't have. mtdblock10 doesn't seem to be doing much, so I repurposed it to be swap.
+
+::
+
+    mkswap /dev/mtdblock10
+    echo >>/etc/fstab "/dev/mtdblock10         none            swap            sw              0 0 "
+    swapon -av
+    
+Sadly this still wasn't enough, so I (tempoorarily) added some swapon the sdcard,
+
+::
+
+    dd if=/dev/zero if=/swap bs=1024 count=1024
+    mkswap /swap
+    swapon /swap
+    
+Mali Magic part 2
+-----------------
+
+After installing the x11 fbturbo driver from the overlay and setting /etc/X11/xorg.conf appropriatly, I got some errors.
+
+It appears that the `libUMP.so` installed from the overlay uses API version 2, while the kernel module is API version 3
+
+::
+
+    [70030.436237] UMP<2>: API version set to 3 (incompatible with client version 2)
+    [70030.436300] UMP<2>: Session closed
+    [70060.822509] UMP<2>: New session opened
+
+After some protracted messing about with the android libMali.so, it turned out that I could get a proper linux one from [https://github.com/linux-sunxi/sunxi-mali.git](https://github.com/linux-sunxi/sunxi-mali.git). This repository contains a load of binaries with different versions. `lib/mali/r3p0/armhf/x11/libMali.so` works for me.
+
+The libUMP.so version mismatch can be worked around by installing the ARM package that they call 'DX910-SW-99006-r6p1-01rel0' from [http://malideveloper.arm.com/resources/drivers/open-source-mali-gpus-ump-user-space-drivers-source-code](http://malideveloper.arm.com/resources/drivers/open-source-mali-gpus-ump-user-space-drivers-source-code). This contains source for a libUMP.so that uses API version 3.
+
+After reinstalling `x11-drivers/mali-drivers` (with the libMali.so from linux-sunxi) and `mali-drivers/xf86-video-fbturbo`, I got a clean start of X
+
+::
+
+    [  1096.561] (II) FBTURBO(0): Creating default Display subsection in Screen section
+            "Default Screen Section" for depth/fbbpp 24/32
+    [  1096.561] (==) FBTURBO(0): Depth 24, (==) framebuffer bpp 32
+    [  1096.561] (==) FBTURBO(0): RGB weight 888
+    [  1096.561] (==) FBTURBO(0): Default visual is TrueColor
+    [  1096.561] (==) FBTURBO(0): Using gamma correction (1.0, 1.0, 1.0)
+    [  1096.562] (II) FBTURBO(0): hardware: gefb (video memory: 32768kB)
+    [  1096.562] (**) FBTURBO(0): Option "Rotate" "UD"
+    [  1096.562] (**) FBTURBO(0): Option "fbdev" "/dev/fb0"
+    [  1096.562] (**) FBTURBO(0): Option "DRI2" "true"
+    [  1096.563] (II) FBTURBO(0): processor: ARM Cortex-A9
+    [  1096.563] (**) FBTURBO(0): rotating screen upside-down
+    [  1096.563] (II) FBTURBO(0): checking modes against framebuffer device...
+    [  1096.563] (II) FBTURBO(0): checking modes against monitor...
+    [  1096.564] (--) FBTURBO(0): Virtual size is 1024x600 (pitch 1024)
+    [  1096.564] (**) FBTURBO(0):  Built-in mode "current": 51.2 MHz, 38.1 kHz, 60.0 Hz
+    [  1096.564] (II) FBTURBO(0): Modeline "current"x0.0   51.20  1024 1184 1204 1344  600 612 615 635 -hsync +vsync -csync (38.1 kHz b)
+    [  1096.564] (==) FBTURBO(0): DPI set to (96, 96)
+    [  1096.564] (II) Loading sub module "fb"
+    [  1096.564] (II) LoadModule: "fb"
+    [  1096.565] (II) Loading /usr/lib/xorg/modules/libfb.so
+    [  1096.570] (II) Module fb: vendor="X.Org Foundation"
+    [  1096.571]    compiled for 1.17.4, module version = 1.0.0
+    [  1096.571]    ABI class: X.Org ANSI C Emulation, version 0.4
+    [  1096.571] (**) FBTURBO(0): using shadow framebuffer
+    [  1096.571] (II) Loading sub module "shadow"
+    [  1096.571] (II) LoadModule: "shadow"
+    [  1096.572] (II) Loading /usr/lib/xorg/modules/libshadow.so
+    [  1096.573] (II) Module shadow: vendor="X.Org Foundation"
+    [  1096.573]    compiled for 1.17.4, module version = 1.1.0
+    [  1096.573]    ABI class: X.Org ANSI C Emulation, version 0.4
+    [  1096.573] (==) Depth 24 pixmap format is 32 bpp
+    [  1096.611] (II) FBTURBO(0): can't load 'g2d_23' kernel module
+    [  1096.611] (II) FBTURBO(0): failed to enable the use of sunxi display controller
+    [  1096.612] (II) FBTURBO(0): No sunxi-g2d hardware detected (check /dev/disp and /dev/g2d)
+    [  1096.612] (II) FBTURBO(0): G2D hardware acceleration can't be enabled
+    [  1096.612] (II) FBTURBO(0): enabled fbdev copyarea acceleration
+    [  1096.612] (II) FBTURBO(0): display rotated; disabling DGA
+    [  1096.612] (II) FBTURBO(0): using driver rotation; disabling XRandR
+    [  1096.612] (==) FBTURBO(0): Backing store enabled
+    [  1096.615] (==) FBTURBO(0): DPMS enabled
+    [  1096.615] (II) FBTURBO(0): failed to enable hardware cursor
+    [  1096.662] (II) Loading sub module "dri2"
+    [  1096.662] (II) LoadModule: "dri2"
+    [  1096.662] (II) Module "dri2" already built-in
+    [  1096.665] (II) FBTURBO(0): warning, can't workaround Mali r3p0 window resize bug
+    [  1096.665] (II) FBTURBO(0): display controller hardware overlays can't be used for DRI2
+    [  1096.665] (II) FBTURBO(0): Wait on SwapBuffers? enabled
+    [  1096.666] (II) FBTURBO(0): [DRI2] Setup complete
+    [  1096.666] (II) FBTURBO(0): [DRI2]   DRI driver: lima
+    [  1096.666] (II) FBTURBO(0): using DRI2 integration for Mali GPU (UMP buffers)
+    [  1096.666] (II) FBTURBO(0): Mali binary drivers can only accelerate EGL/GLES
+    [  1096.666] (II) FBTURBO(0): so AIGLX/GLX is expected to fail or fallback to software
+
+but there seems to be some problem with dragging windows - sometimes they disappear. Interestingly, this doesn't happen when I rotate the screen with the `xorg.conf` line 
+
+::
+
+    Option "Rotate" "UD"
+
+which (based on the log above) disables DGA.
+
+Also I can't get egl to work. Trying the test program from linux-sunxi gives
+
+::
+
+    Error: eglInitialise failed! 
+
+Investigating Compiler Toolchains
+---------------------------------
+
+It would be nice to know quite why it seems it is only the apc-rock-toolchain that is able to compile a working kernel. Not even the native compiler on the board itself can do it. Delving deeper it appears that the triple of the working tool chain is `arm-none-linux-gnueabi` and its version is 4.4.7.
+
+Hence, a similar compiler can be installed via gentoo's crossdev with,
+
+::
+
+    crossdev -t arm-none-linux-gnueabi --g 4.4.7 --l 2.22-r2 --k 4.4 --b 2.25.1-r1
+
+(The other versions are taken from another machine I have which happens to have a clean crossdev install of gcc arm-none-linux-gnueabi 4.4.7)
+
+This almost works, failing only to compile glibc 
+
+::
+    
+    Calculating dependencies  .. ... done!
+    [ebuild  NS   #] cross-arm-none-linux-gnueabi/gcc-5.3.0 [4.4.7] USE="nls nptl (-altivec) -awt (-cilk) -cxx -debug -doc (-fixed-point) -fortran -gcj -go -graphite (-hardened) -jit -libssp -multilib -multislot -nopie -nossp -objc -objc++ -objc-gc -openmp -regression-test -sanitize -vanilla"
+    [ebuild   R   ~] cross-arm-none-linux-gnueabi/glibc-2.22-r2
+
+    The following mask changes are necessary to proceed:
+     (see "package.unmask" in the portage(5) man page for more details)
+    # required by cross-arm-none-linux-gnueabi/glibc-2.22-r2::gentoo-overlay-mali-x11[-crosscompile_opts_headers-only]
+    # required by @selected
+    # required by @world (argument)
+    # /etc/portage/package.mask/cross-arm-none-linux-gnueabi:
+    =cross-arm-none-linux-gnueabi/gcc-5.3.0
+
+As I'm trying to compile the kernel, hopefully the lack of glibc won't matter.
+
+Patching apc-rock-II-kernel
+---------------------------
+  
+The kernel sources mentioned above have some hard coded cross compilation variables in them. e.g.
+
+::
+
+    ./drivers/input/sensor/isl29023_lsensor/Makefile:CROSS = arm_1103_le-
+  
+Not only does this stop you from using any other toolchain apart from `arm_1103_le-`, it is the wrong variable, it should be `$(CROSS_COMPILE)` not `$(CROSS)`. This can be fixed with something like:
+
+::
+
+    find . -name "Makefile" -exec grep -H arm_1103_le- {} \; | cut -d: -f1 | while read A; do { sed -i "s,arm_1103_le-,\$\(CROSS_COMPILE\),g" $A; }; done;
+
+ 
+After which I started it (on the board) with
+ 
+::
+ 
+    time make ARCH=arm CROSS_COMPILE=arm-none-linux-gnueabi- -j3 ubin
+    
+    ...
+
+    Image Name:   Linux-3.4.5-local
+    Created:      Sat Mar 19 08:07:57 2016
+    Image Type:   ARM Linux Kernel Image (uncompressed)
+    Data Size:    5016384 Bytes = 4898.81 kB = 4.78 MB
+    Load Address: 00008000
+    Entry Point:  00008000
+      Image arch/arm/boot/uImage is ready
+      Image uzImage.bin is ready
+
+    real    57m5.700s
+    user    99m48.006s
+    sys     9m37.543s
+
+Which produced a kernel that would boot, removing the need for an additional compilation machine - the board can now compile all its own binaries.
+
+u-boot from the sdcard
+----------------------
+
+Given that the only bit of the boot process that I can't recompile is uboot, I had a look around to see if I could.
+
+I found [https://github.com/apc-io/apc-rock-II.git](https://github.com/apc-io/apc-rock-II.git) which contains a u-boot source tree that compiles with the apc-rock-II-toollchain mentioned above, but *not* with the home compiled arm-none-linux-gnueabi-.
+
+Repartitioning mtd
+------------------
+
+Compiling boost requires a lot of disk space and a lot of memory. Removing the 1Gb swap file mentioned above, gives enough disk space to start compiling, but not enough memory.
+
+I tried to use the mtdblock11 partition as swap as well, but the first few blocks are bad. Neither `mkswap` or `mkfs.ext4` will play with a partition with the first few blocks broken.
+
+Luckily I found [http://free-electrons.com/blog/managing-flash-storage-with-linux] (http://free-electrons.com/blog/managing-flash-storage-with-linux)_ which describes how to sort-of repartition the mtd devices.
+
+This board seems to have two NAND chips, with partitions 0-3 on the first and 4-11 on the other.
+
+::
+
+    [    0.419832] MTDSF_PHY_ADDR = FFF80000, sfsize = 00080000
+    [    0.423286] Creating 4 MTD partitions on "mtdsf device":
+    [    0.426685] 0x000000000000-0x000000050000 : "u-boot-SF"
+    [    0.431038] 0x000000050000-0x000000060000 : "u-boot env. cfg. 1-SF"
+    [    0.435179] 0x000000060000-0x000000070000 : "u-boot env. cfg. 2-SF"
+    [    0.439238] 0x000000070000-0x000000080000 : "w-load-SF"
+    [    0.440082] wmt sf controller initial ok
+    [    0.440184] MTD dev1 size: 0x00010000 "u-boot env. cfg. 1-SF"
+    [    0.443405] MTD dev2 size: 0x00010000 "u-boot env. cfg. 2-SF"
+    [    0.637882] crc32 = 0xe40335a4 , env_ptr->crc = 0xe40335a4
+    [    0.638224] wmt.boot.dev ret = 0
+    [    0.642356] nand chip device id = 0xd78493 0x72570000
+    [    0.646331] ## Warning: "wmt.io.nand" not defined
+    [    0.649369] NAND device: Manufacturer ID: 0x98, Chip ID: 0xd78493 (Toshiba TC58TEG5DCJTA00)
+    [    0.653473] ## Warning: "wmt.nand.partition" not defined
+    [    0.656709] PLLB=0x1d, spec_clk=0x14070a12
+    [    0.656723] T1=2, clk1=17, div1=12, Thold=1, tREA=20+delay(9)
+    [    0.656736] T2=1, clk2=30, div2=21, Thold2=1, comp=1
+    [    0.656746] Tim1=835584 , Tim2=983040
+    [    0.656753] T2 is greater and not use
+    [    0.656766] TWB=6T, tWHR=8T, tadl=18T, div=0xc, (RH/RC/WH/WC)=0x1323
+    [    0.656776] DDR=0
+    [    0.659902] last_bank_dmaaddr=0x1638bc00
+    [    0.659912] oob_col=17434
+    [    0.659919] last_bank_col=16410
+    [    0.659926] BCH ECC 40 BIT mode
+    [    0.917363] nand flash is not ready
+    [    0.920484] Reset err, nand device chip 2 is not ready
+    [    0.925648] Retry block table is found for chip 0
+    [    0.927978] Bad block table found at page 261888, version 0x01
+    [    0.933458] Bad block table found at page 261632, version 0x01
+    [    0.937806] nand_read_bbt: bad block at 0x0000a1800000 (block646)
+    [    0.941868] Creating 8 MTD partitions on "WMT.nand":
+    [    0.941886] 0x000000000000-0x000001000000 : "logo"
+    [    0.946125] 0x000001000000-0x000002000000 : "boot"
+    [    0.950239] 0x000002000000-0x000003000000 : "recovery"
+    [    0.954305] 0x000003000000-0x000004000000 : "misc"
+    [    0.958336] 0x000004000000-0x000008000000 : "keydata"
+    [    0.962233] 0x000008000000-0x000038000000 : "system"
+    [    0.963131] 0x000038000000-0x000058000000 : "cache"
+    [    0.966961] 0x000058000000-0x000100000000 : "data"
+    [    0.970853] nand initialised ok
+
+Following the instructions in the link, I think I need to add this to the kernel command line
+
+::
+
+    mtdparts=WMT.nand:16m(logo),16m(boot),16m(recovery),16m(misc),4032m(linux)
+
+This split over two chips has the added bonus that, if I screw up the repartitioning of the second one, the u-boot on the first one should still be ok, and hence the board should still boot.
+
+That page also makes clear that using the mtdblock devices willy nilly (like normal partitions) will end in tears due to lack of bad block handling (see above `mkswap` and `mkfs.ext4` woes). Hence I want ubifs, which requires `sys-fs/mtd-utils`.
+
+Setting up ubifs according to the instructions works, but I can't make a swap file, when I try to swapon I get
+
+:: 
+
+    swapon: swapfile has holes 
+
+which can be got round by sending it through the loop device
+
+::
+
+    losetup /dev/loop0 /mnt/mtdblock8/oswap
+    mkswap /dev/loop0
+    swapon /dev/loop0
+    
+    
+Mali Magic Part 3
+-----------------
+
+Different kernels 
+
+https://github.com/allwinner-zh/linux-3.4-sunxi.git
+
+DX910-SW-99002-r6p1-01rel0 contains mali driver and ump.ko
+
+Makefile needs hacking to include MALI_PLATFORM=arm
+
+But platform/arm/arm.c only contains detection for RealView and Vexpress. Needs hacking to choose Mali 400 MP2.
+
+Crashes the kernel.
+
+
+
+    

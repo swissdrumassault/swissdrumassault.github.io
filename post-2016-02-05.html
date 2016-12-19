@@ -1,0 +1,160 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  
+<title>Linux Ainol Novo 7</title>  
+  <link rel="stylesheet" href="alabaster.css" type="text/css" />
+  
+  <script type="text/javascript">
+    var DOCUMENTATION_OPTIONS = {
+      URL_ROOT:    '',
+      VERSION:     '',
+      COLLAPSE_INDEX: false,
+      FILE_SUFFIX: '',
+      HAS_SOURCE:  true
+    };
+  </script>
+  
+  <script type="text/javascript" src="jquery.js"></script>
+  <script type="text/javascript" src="underscore.js"></script>
+  <script type="text/javascript" src="doctools.js"></script>
+
+  <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+</head>
+<body >  
+
+<div class="document">
+
+<div class="documentwrapper">
+<div class="bodywrapper"> 
+<div class="body">
+<div class="section">
+
+<h2>Linux Ainol Novo 7</h2>
+<p>A few years ago I bough a few incredibly cheap MIPS tablets, made by a Chinese company called, rather unfortunatly, Ainol. The varients I got seem to be called Novo 7 and contain Ingenic Xburst jz7440 systems, based on npm702. </p>
+<p><code>/proc/cpuinfo</pre></code> says: </p>
+<code><pre>
+    system type             : JZ4770
+    processor               : MIPS-compatible processor JZ4770
+    cpu model               : Ingenic Xburst
+    BogoMIPS                : 1001.47
+    wait instruction        : yes
+    microsecond timers      : no
+    tlb_entries             : 32
+    extra interrupt vector  : yes
+    hardware watchpoint     : yes, count: 1, address/irw mask: [0x0fff]
+    ASEs implemented        : mxu
+    shadow register sets    : 1
+    core                    : 0
+    VCED exceptions         : not available
+    VCEI exceptions         : not available
+    Features                : fpu mxu dsp lowpower
+    CPU implementer         : Ingenic
+    CPU architecture        : MIPS
+
+    Hardware                : npm702
+    Revision                : 0005
+    Serial                  : 0000000000000000
+
+    EFUSE0                  : 90880f07
+    EFUSE1                  : 0eb05011
+    EFUSE2                  : 08550000
+    EFUSE3                  : 8854c84f
+    EFUSE4                  : 00000000
+    EFUSE5                  : 00000000
+    EFUSE6                  : 00000000
+    EFUSE7                  : 00000000 
+
+
+</pre></code>
+<p>I have found two useful blogs about these machines, one <a href="http://suz-aa1.sblo.jp/article/54697897.html">Japanese</a>, one <a href="http://a320.emulate.su/2012/05/14/mini-obzor-planshet-ainol-novo7-paladin-i-processor-jz4770/">Russian</a>.</p>
+<p>I have managed to produce a kernel that can be booted on these boards, but I can&apos;t remember exactly where I got the source from. The Japanese AspireOne blog includes some links to patches to kernel 3.0.23 which match the version that I have source for. There&apos;s also an android custom rom by someone called &quot;pinkflodz&quot;.</p>
+<p>This can be cross compiled (with one caveat) and installed via clockworkmod (which was already installed as the android recovery system on the tablets I got). The caveat is that there is some confusion in my tool chain (gcc 4.8.3) as to what opcodes can be used. This can be fixed by adding a pre-processing step to cc1.  </p>
+<p>Move <code>/usr/libexec/gcc/mipsel-linux-uclibc/4.8.3/cc1</pre></code> to <code>/usr/libexec/gcc/mipsel-linux-uclibc/4.8.3/cc1.orig</pre></code> and replace <code>cc1</pre></code> with this script </p>
+<code><pre>
+    #!/bin/sh
+
+    DIR=/usr/libexec/gcc/mipsel-linux-uclibc/4.8.3
+
+    $DIR/cc1.orig $* > /tmp/$$-xxx
+    egrep -i '(S32I2M|S32M2I)' /tmp/$$-xxx > /dev/null
+    if [ $? == 0 ]; then
+      $DIR/mxu_as < /tmp/$$-xxx
+    else
+      cat /tmp/$$-xxx
+    fi
+    rm -f /tmp/$$-xxx
+
+</pre></code>
+<p>(I got this from the <a href="http://suz-aa1.sblo.jp/article/38304175.html">AspireOne blog</a>. Thank you.)</p>
+<p>There&apos;s also a slight issue with the wifi. I couldn&apos;t get the dhd.ko from the kernel source to work properly, so had to use the one I got from pinkflodz&apos;s rom (I think). This requires a bit of firmware (again taken from the rom) and for the filenames to be passed to the module when inserted, e.g.</p>
+<code><pre>
+    insmod /lib/modules/3.0.21/dhd.ko firmware_path=/gentoo/lib/firmware/fw_iw8101.bin nvram_path=/gentoo/lib/firmware/nvram_iw8101.txt 
+
+
+</pre></code>
+<p>Luckily 3.0.21 and 3.0.23 are similar enough that this works.</p>
+<p>I was also able to get the abd from the rom to work with linux. So that, if the wifi doesn&apos;t work, you can plug it in and use the normal android abd to get a shell over USB. </p>
+<code><pre>
+    einfo "Starting adb"
+    chown 2000 /dev/android_adb
+    chmod a+rwx /dev/android_adb
+    echo 0 >/sys/class/android_usb/android0/enable
+    echo 18D1 >/sys/class/android_usb/android0/idVendor
+    echo D001 >/sys/class/android_usb/android0/idProduct
+    echo adb >/sys/class/android_usb/android0/functions
+    echo 1 >/sys/class/android_usb/android0/enable
+    /opt/ainol/bin/adbd &
+
+
+
+</pre></code>
+  
+</div>
+</div>
+</div>
+</div>
+
+<div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+<div class="sphinxsidebarwrapper">
+
+<h2>2016-02-05</h2>
+<ul>
+<li><a href="index.html">top</a></li>
+</ul>
+<br/>
+<ul>
+<li><a href="post-2016-12-19.html">2016-12-19 - New blogging, new danger</a></li>
+<li><a href="post-2016-06-12.html">2016-06-12 - Gmail is awful</a></li>
+<li><a href="post-2016-03-18.html">2016-03-18 - Linux on a BWC 7&quot; tablet</a></li>
+<li><a href="post-2016-02-14.html">2016-02-14 - A 45 degree Styrofoam cutting jig</a></li>
+<li><a href="post-2016-02-05.html">2016-02-05 - Linux Ainol Novo 7</a></li>
+<li><a href="post-2016-02-03.html">2016-02-03 - Non-constant curvature log-likelihoods</a></li>
+<li><a href="post-2016-02-03a.html">2016-02-03 - Guitar project final piece</a></li>
+<li><a href="post-2016-02-02.html">2016-02-02 - C++ link errors with AVR systems</a></li>
+</ul>
+
+<div id="searchbox" style="display: none" role="search">
+  <h3>Search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+</div>
+</div>
+</div>
+
+</body>
+</html>
+

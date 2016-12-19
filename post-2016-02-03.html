@@ -1,0 +1,118 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  
+<title>Non-constant curvature log-likelihoods</title>  
+  <link rel="stylesheet" href="alabaster.css" type="text/css" />
+  
+  <script type="text/javascript">
+    var DOCUMENTATION_OPTIONS = {
+      URL_ROOT:    '',
+      VERSION:     '',
+      COLLAPSE_INDEX: false,
+      FILE_SUFFIX: '',
+      HAS_SOURCE:  true
+    };
+  </script>
+  
+  <script type="text/javascript" src="jquery.js"></script>
+  <script type="text/javascript" src="underscore.js"></script>
+  <script type="text/javascript" src="doctools.js"></script>
+
+  <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+</head>
+<body >  
+
+<div class="document">
+
+<div class="documentwrapper">
+<div class="bodywrapper"> 
+<div class="body">
+<div class="section">
+
+<h2>Non-constant curvature log-likelihoods</h2>
+<p>I have been trying to think if I can come up with a likelihood with non-constant log-curvature, but which still produces integrable posteriors (i.e. the evidence can be calculated) when used with normal entropic priors.</p>
+<p>Sadly, I don&apos;t think I can.</p>
+<p>I had hoped that  might be useful, as it has reasonably non trivial gradients. </p>
+$$
+    L = -\log\left(\frac{1}{x^2 + 1} \right) 
+$$
+$$
+    \frac{\partial L}{\partial x} = \frac{2x}{x^2 + 1}  
+$$
+$$
+    \frac{\partial^2 L}{\partial x^2} = 2\frac{1-x^2}{\left(x^2 + 1\right)^2}  
+$$
+<p>but, the posterior form (for quadratic entropy) is not integrable</p>
+$$
+    E \propto \int \frac{\exp\left( -\frac{1}{2}\left(\frac{x-\mu}{\sigma}\right)^2\right)}{x^2 + 1} \textrm{d}x
+$$
+<p>Then it occurred to me that I don&apos;t need a properly integrable function. I&apos;m trying to work this out to validate an inference system. This system only returns Gaussian approximations to the evidence, so I can validate it by comparing the real Gaussian approximation with what it has calculated. I only need to make sure that I can work out the curvature of the log-posterior at its peak. </p>
+<p>Also the form of the prior used is actually slightly different, it is centered at zero. Also, to make things interesting, I&apos;m going to make  the residual between some data and some linear model fit</p>
+$$
+    x_i = \frac{d_i - \sum_j R_{ij} h_j}{\sigma}
+$$
+$$
+    E \propto \int \frac{\exp\left( -\frac{1}{2}\sum_j \frac{h^2_j}{m_i}\right)}{\prod_i x_i^2 + 1} \textrm{d}x
+$$
+<p>Considering the (unnormalised) log-posterior,</p>
+$$
+    Q = -\frac{1}{2}\sum_j \frac{h^2_j}{m_i} - \sum_i \log\left( \left(\frac{d_i - \sum_j R_{ij} h_j}{\sigma}\right)^2 + 1 \right)
+$$
+<p>and its gradient</p>
+$$
+    \frac { \partial Q}{\partial h_k} = - \frac{h_k}{m_i} - \sum_i \left( \left(\frac{d_i - \sum_j R_{ij} h_j}{\sigma}\right)^2 + 1 \right)^{-1} 
+$$
+$$
+    2 \left(\frac{d_i - \sum_j R_{ij} h_j}{\sigma}\right) \frac{-R_{ik}}{\sigma}
+$$
+<p>shows that finding the peak is going to be hard.</p>
+  
+</div>
+</div>
+</div>
+</div>
+
+<div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+<div class="sphinxsidebarwrapper">
+
+<h2>2016-02-03</h2>
+<ul>
+<li><a href="index.html">top</a></li>
+</ul>
+<br/>
+<ul>
+<li><a href="post-2016-12-19.html">2016-12-19 - New blogging, new danger</a></li>
+<li><a href="post-2016-06-12.html">2016-06-12 - Gmail is awful</a></li>
+<li><a href="post-2016-03-18.html">2016-03-18 - Linux on a BWC 7&quot; tablet</a></li>
+<li><a href="post-2016-02-14.html">2016-02-14 - A 45 degree Styrofoam cutting jig</a></li>
+<li><a href="post-2016-02-05.html">2016-02-05 - Linux Ainol Novo 7</a></li>
+<li><a href="post-2016-02-03.html">2016-02-03 - Non-constant curvature log-likelihoods</a></li>
+<li><a href="post-2016-02-03a.html">2016-02-03 - Guitar project final piece</a></li>
+<li><a href="post-2016-02-02.html">2016-02-02 - C++ link errors with AVR systems</a></li>
+</ul>
+
+<div id="searchbox" style="display: none" role="search">
+  <h3>Search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+</div>
+</div>
+</div>
+
+</body>
+</html>
+

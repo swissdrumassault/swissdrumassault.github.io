@@ -35,12 +35,12 @@
 <div class="section">
 
 <h2>New blogging, new danger</h2>
-<p>I have been getting increasing frustrated with the blogging system I had been using. It was basically <code>sphinx</pre></code> with a bit of extra processing from soemthing called <code>ablog</pre></code>. It seemed very hard to change or extend anything and generated pages that (for some reason) needed to be a sub-directory of the main site (requiring a forward from index.html) and loaded very slowly. </p>
+<p>I have been getting increasingly frustrated with the blogging system I had been using. It was basically <code>sphinx</pre></code> with a bit of extra processing from something called <code>ablog</pre></code>. It seemed very hard to change or extend anything and generated pages that (for some reason) needed to be a sub-directory of the main site (requiring a forward from index.html) and loaded very slowly. </p>
 <p>It also seemed to confuse <code>git</pre></code> quite a lot every time I rebuilt the site.</p>
 <p>I started looking deeper into how it all worked. It appears that almost all the formatting cleverness is done through <code>alabaster.css</pre></code>, just adding that to the top a reasonably plain html file generates pages that look quite pleasant.</p>
 <p>This inspired me to see if I could recreate the other useful bits of the set up (converting <code>.rst</pre></code> files into <code>.html</pre></code> and building a search index) in a clearer, simpler, way.</p>
 <p>The search index is created by  <code>/usr/lib64/python3.4/site-packages/sphinx/search/__init__.py</pre></code> with help from <code>/usr/lib64/python3.4/site-packages/sphinx/search/en.py</pre></code>. Each word is reduced to its stem, using the porterstemmer algorithm, then filtered. </p>
-<p>The source indicated a C implimentation of the stemmer could be found <a href="http://www.tartarus.org/~martin/PorterStemmer">here</a>.</p>
+<p>The source indicated a C implementation of the stemmer could be found <a href="http://www.tartarus.org/~martin/PorterStemmer">here</a>.</p>
 <p>I then needed to parse my rst files into a single doctools doctree object and run the indexer.</p>
 <p>After a certain amount of toiling in the sphinx source (and minimal documentation), I realised that it would be quicker (and more fun) to write my own sort-of-rst parser. This would have the added benefit that I could do links in a much more sensible manner (i.e. like markdown).</p>
 <p>This I have now done (apart from tables) and this (current) blog is the result.</p>
